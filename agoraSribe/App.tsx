@@ -37,10 +37,11 @@ const uid = 0;
 const appId = 'ba0a1fde83e44e648d5423d43c03871b';
 const channelName = 'agoraReactNativeStream';
 const token =
-  '007eJxTYJjBG6HCE1U4P2fn7RcVuTI9J7py+v7taV73YWHt6iiuys8KDEmJBomGaSmpFsapJiapZiYWKaYmRsYpJsbJBsYW5oZJza7mKQ2BjAw31x1jZmSAQBBfjCExPb8oMSg1MbnEL7Eksyw1uKQoNTGXgQEAPrsoAg==';
+  '007eJxTYFgTvtf73/TdxxMuG8tPUBPcatbfWbS6geVJ7saV++Q7deIVGJISDRIN01JSLYxTTUxSzUwsUkxNjIxTTIyTDYwtzA2TnpU5pDQEMjJIc7uwMjJAIIgvxpCYnl+UGJSamFzil1iSWZYaXFKUmpjLwAAAxcIloA==';
 const SAMPLE_RATE = 16000;
 const SAMPLE_NUM_OF_CHANNEL = 1;
 const SAMPLES_PER_CALL = 1024;
+const OPEN_API_KEY = '';
 
 const App = () => {
   const agoraEngineRef = useRef<IRtcEngine>(); // Agora engine instance
@@ -202,10 +203,10 @@ const App = () => {
         .unregisterAudioFrameObserver(iAudioFrameObserver);
       console.log('stop recording ');
       agoraEngineRef.current?.stopAudioRecording();
+      startTranscribe();
       setRemoteUid(0);
       setIsJoined(false);
       console.log('you left the channel');
-      startTranscribe();
     } catch (e) {
       console.log(e);
     }
@@ -226,21 +227,22 @@ const App = () => {
       .readFile(filePath, 'base64')
       .then(data => {
         const formData = new FormData();
-        formData.append('language', 'english');
-        formData.append('model_size', 'tiny');
-        formData.append('audio_data', {
+        // formData.append('language', 'english');
+        formData.append('model', 'whisper-1');
+        formData.append('file', {
           uri: Platform.OS === 'android' ? `file://${filePath}` : filePath,
           type: 'audio/wav',
           name: fileName,
         });
 
         axios({
-          url: 'https://3f82-102-219-153-207.ngrok-free.app/transcribe',
+          url: 'https://api.openai.com/v1/audio/transcriptions',
           method: 'POST',
           data: formData,
           headers: {
             Accept: 'application/json',
             'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer + ${OPEN_API_KEY}`,
           },
         })
           .then(function (response) {
