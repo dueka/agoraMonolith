@@ -22,7 +22,6 @@ import {
   ClientRoleType,
   RawAudioFrameOpModeType,
   AudioFrame,
-  VideoFrame,
   createAgoraRtcEngine,
   IRtcEngine,
   RtcSurfaceView,
@@ -34,14 +33,13 @@ import FormData from 'form-data';
 import TranscribedOutput from './src/components/TranscribeOutput';
 
 const uid = 0;
-const appId = 'ba0a1fde83e44e648d5423d43c03871b';
-const channelName = 'agoraReactNativeStream';
-const token =
-  '007eJxTYFgTvtf73/TdxxMuG8tPUBPcatbfWbS6geVJ7saV++Q7deIVGJISDRIN01JSLYxTTUxSzUwsUkxNjIxTTIyTDYwtzA2TnpU5pDQEMjJIc7uwMjJAIIgvxpCYnl+UGJSamFzil1iSWZYaXFKUmpjLwAAAxcIloA==';
+const appId = '';
+const token = '';
+const channelName = '';
+const OPEN_API_KEY = '';
 const SAMPLE_RATE = 16000;
 const SAMPLE_NUM_OF_CHANNEL = 1;
 const SAMPLES_PER_CALL = 1024;
-const OPEN_API_KEY = '';
 
 const App = () => {
   const agoraEngineRef = useRef<IRtcEngine>(); // Agora engine instance
@@ -154,7 +152,9 @@ const App = () => {
     RNFS.mkdir(recordingPath);
     const fileName = 'recording.wav';
     const filePath = `${recordingPath}/${fileName}`;
-
+    await RNFS.unlink(filePath).catch(error => {
+      console.log('Error deleting file:', error);
+    });
     console.log('joining channel');
     if (isJoined) {
       setJoinLoading(false);
@@ -222,12 +222,11 @@ const App = () => {
     if (!(await RNFS.exists(recordingPath))) {
       await RNFS.mkdir(recordingPath);
     }
-
+    console.log('start transcribing');
     RNFetchBlob.fs
       .readFile(filePath, 'base64')
       .then(data => {
         const formData = new FormData();
-        // formData.append('language', 'english');
         formData.append('model', 'whisper-1');
         formData.append('file', {
           uri: Platform.OS === 'android' ? `file://${filePath}` : filePath,
@@ -242,17 +241,28 @@ const App = () => {
           headers: {
             Accept: 'application/json',
             'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer + ${OPEN_API_KEY}`,
+            Authorization: `Bearer ${OPEN_API_KEY}`,
           },
         })
           .then(function (response) {
             console.log('response :', response);
-            setTranscribedData((oldData: any) => [...oldData, response.data]);
+            setTranscribedData((oldData: any) => [
+              ...oldData,
+              response.data?.text,
+            ]);
             setIsTranscribing(false);
             intervalRef.current = setInterval(
               transcribeInterim,
               transcribeTimeout * 1000,
             );
+            // Delete the recorded file after successful transcription
+            RNFS.unlink(filePath)
+              .then(() => {
+                console.log('File deleted:', filePath);
+              })
+              .catch(error => {
+                console.log('Error deleting file:', error);
+              });
           })
           .catch(function (error) {
             console.log('error :', error);
